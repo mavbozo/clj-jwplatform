@@ -10,6 +10,7 @@
             [clojure.string :as str]
             [camel-snake-kebab.core :refer [->snake_case]]))
 
+
 (def JwpComponentSchema
   ""
   {:base-url sch/Str
@@ -25,8 +26,7 @@
    :api-secret api-secret})
 
 
-(defn default-params
-  ""
+(defn- default-jwp-params
   [jwp]
   {"api_format" "json"
    "api_nonce"  (url-part 8)
@@ -34,28 +34,23 @@
    "api_key"    (:api-key jwp)})
 
 
-(defn generate-signature [jwp qs]
-  (-> (str (map->query qs) (:api-secret jwp))
+(defn- jwp-signature
+  "create jwp-signature for jwp parameters params"
+  [jwp params]
+  (-> (str (map->query params) (:api-secret jwp))
       (sha1)))
 
 
 
-(defn generate-signed-query-params
-  ""
-  [jwp ap]
-  (assoc ap "api_signature" (generate-signature jwp ap)))
+(defn- signed-params
+  [jwp params]
+  (assoc params "api_signature" (jwp-signature jwp params)))
 
-
-(defn generate-url [jwp path qs]
-  (-> (url (:base-url jwp) path)
-      (assoc :query qs)
-      str))
 
 
 (def NewVideoSchema
   "new video schema"
-  {
-   (sch/optional-key :title) sch/Str
+  {(sch/optional-key :title) sch/Str
    (sch/optional-key :tags) [sch/Str]
    (sch/optional-key :description) sch/Str
    (sch/optional-key :author) sch/Str
@@ -68,19 +63,20 @@
    (sch/optional-key :custom-params) (sch/pred map?)
    (sch/optional-key :md5) sch/Str
    (sch/optional-key :resumable) (sch/enum "True"  "False")
-   (sch/optional-key :size) sch/Int
-   })
+   (sch/optional-key :size) sch/Int})
 
 
-(def kw->str (comp str name))
+(defn- kw->str
+  [k]
+  ((comp str name) k))
 
 
-(defn create-video-input->flatmap
-  ""
+(defn- cv-input-param->jwp-param
+  "convert create-video's input parameter to jwp parameter map"
   [inp]
   (let [cp (get inp :custom-params {})
         mcp (into {} (map (fn [[k v]] 
-                            [(str "custom." (->snake_case ((comp str name) k)))
+                            [(str "custom." (->snake_case (kw->str k)))
                              (->snake_case v)])
                           cp))
         inp* (-> (dissoc inp :custom-params)
@@ -88,16 +84,30 @@
     (map-kv (fn [k v]
               (case k
                 :tags [k (str/join "," v)]
-                [k v])) inp*)
-    )
-  )
+                [k v])) inp*)))
 
+
+(defn- jwp-api-url 
+  "return jw platform api url based on path and signed query params string"
+  [jwp path params]
+  (let [params* (merge (default-jwp-params jwp) params)
+        signed-params (signed-query-params jwp params*)]
+    (-> (url (:base-url jwp) path)
+        (assoc :query signed-params)
+        str)))
+
+(defn- create-video-url
+  [jwp inp]
+  (let [action-path "/videos/create"
+        cv-params (map-keys kw->str (cv-input-param->jwp-param inp))]
+    (jwp-api-url jwp action-path cv-params)))
 
 
 (sch/defn ^:always-validate create-video
-  ""
+  "jwplatform api: create video" 
   [jwp :- JwpComponentSchema inp :- NewVideoSchema]
-  (let [ap (merge (default-params jwp) (map-keys (comp str name) (create-video-input->flatmap inp)))
-        sap (generate-signed-query-params jwp ap)
-        url (generate-url jwp "/videos/create" sap)]
-    url))
+  (try
+    (hclient/get (create-video-url jwp inp) {:as :json :coerce :exceptional})
+    (catch Exception e
+      (throw (ex-info "clj-jwplatform api call error" (-> e ex-data :body))))))
+

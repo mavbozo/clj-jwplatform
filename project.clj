@@ -11,4 +11,5 @@
                  [pandect "0.5.4"]
                  [prismatic/schema "1.0.1"]
                  [camel-snake-kebab "0.3.2"]
-                 [com.cemerick/url "0.1.1"]])
+                 [com.cemerick/url "0.1.1"]
+                 [org.clojure/test.check "0.8.2"]])
