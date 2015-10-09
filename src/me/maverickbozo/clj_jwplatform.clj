@@ -91,7 +91,7 @@
   "return jw platform api url based on path and signed query params string"
   [jwp path params]
   (let [params* (merge (default-jwp-params jwp) params)
-        signed-params (signed-query-params jwp params*)]
+        signed-params (signed-params jwp params*)]
     (-> (url (:base-url jwp) path)
         (assoc :query signed-params)
         str)))
@@ -107,7 +107,9 @@
   "jwplatform api: create video" 
   [jwp :- JwpComponentSchema inp :- NewVideoSchema]
   (try
-    (hclient/get (create-video-url jwp inp) {:as :json :coerce :exceptional})
+    (-> (hclient/get (create-video-url jwp inp) {:as :json :coerce :always})
+        :body)
     (catch Exception e
-      (throw (ex-info "clj-jwplatform api call error" (-> e ex-data :body))))))
+      (-> e ex-data :body)
+      #_(throw (ex-info "clj-jwplatform api call error" (-> e ex-data :body))))))
 
