@@ -10,9 +10,9 @@
             [clojure.string :as str]
             [camel-snake-kebab.core :refer [->snake_case]]))
 
-
+ 
 (def JwpComponentSchema
-  ""
+  "this library component"
   {:base-url sch/Str
    :api-key sch/Str
    :api-secret sch/Str})
