@@ -10,9 +10,12 @@
             [clojure.string :as str]
             [camel-snake-kebab.core :refer [->snake_case]]))
 
+
+;; bump version
+
  
 (def JwpComponentSchema
-  "this library component"
+  "this library component."
   {:base-url sch/Str
    :api-key sch/Str
    :api-secret sch/Str})
