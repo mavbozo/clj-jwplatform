@@ -63,7 +63,7 @@
    (sch/optional-key :sourceurl) sch/Str
    (sch/optional-key :sourceformat) (sch/enum "mp4" "webm" "flv" "aac" "mp3" "vorbis" "youtube")
    (sch/optional-key :download_url) sch/Str
-   (sch/optional-key :custom-params) (sch/pred map?)
+   (sch/optional-key :custom-params) {sch/Keyword sch/Str}
    (sch/optional-key :md5) sch/Str
    (sch/optional-key :resumable) (sch/enum "True"  "False")
    (sch/optional-key :size) sch/Int})
